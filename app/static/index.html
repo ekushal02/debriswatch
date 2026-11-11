@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DebrisWatch · Inspection desk</title><link rel="stylesheet" href="/static/style.css"><script defer src="/static/app.js"></script></head>
+<body>
+<header><a class="brand" href="/">◈ <span>DebrisWatch</span></a><span class="eyebrow">LOCAL INSPECTION DESK</span><a class="docs" href="/docs" target="_blank">API documentation ↗</a></header>
+<main>
+<div class="intro"><div><p class="eyebrow">SURFACE INTELLIGENCE</p><h1>See it. Inspect it.<br><span>Keep a clear record.</span></h1><p>One camera. A defined area. Every finding ready for review.</p></div><div id="mode" class="mode">Connecting to backend…</div></div>
+<div id="notice" role="status" aria-live="polite"></div>
+<section class="workspace">
+<aside class="panel controls"><div class="section-title"><span class="step">01</span><h2>Set up inspection</h2></div>
+<label for="source">Input source</label><select id="source"><option value="video">Recorded video</option><option value="camera">USB camera on backend host</option></select>
+<div id="videoInputs"><label class="upload" for="file"><strong>Choose a video</strong><span>MP4, AVI, MOV or MKV</span><input id="file" type="file" accept=".mp4,.avi,.mov,.mkv"></label><p id="uploadStatus" class="hint">Try samples/demo.avi in demo mode.</p></div>
+<div id="cameraInputs" hidden><label for="cameraIndex">Camera device index</label><input id="cameraIndex" type="number" min="0" max="9" value="0"><p class="hint">Camera belongs to the machine running the backend.</p></div>
+<div class="divider"></div>
+<label for="confidence">Detection confidence <output id="confidenceValue">0.50</output></label><input id="confidence" type="range" min="0.1" max="0.95" step="0.05" value="0.5">
+<div class="twocol"><div><label for="dwell">Inspect after (s)</label><input id="dwell" type="number" min="0.1" max="60" step="0.1" value="1"></div><div><label for="priorityCount">Priority count</label><input id="priorityCount" type="number" min="2" max="50" value="3"></div></div>
+<label for="prioritySeconds">Priority persistence (s)</label><input id="prioritySeconds" type="number" min="0.1" max="60" step="0.1" value="2">
+<div class="zone-tools"><button id="draw" class="secondary">Draw zone</button><button id="reset" class="text-button">Reset</button></div><p id="zoneHelp" class="hint">Default zone covers the central 90%. Draw 3–12 corners of a convex polygon, then finish.</p>
+<button id="start" class="primary" disabled>Start inspection →</button><button id="stop" class="secondary" disabled>Stop inspection</button>
+</aside>
+<section class="panel monitor"><div class="monitor-top"><div class="section-title"><span class="step">02</span><h2>Inspection view</h2></div><span id="jobStatus" class="chip">IDLE</span></div>
+<div class="viewer"><canvas id="canvas" width="640" height="480" aria-label="Video preview and editable inspection zone"></canvas><div id="empty"><span>◈</span><h3>Your inspection starts here</h3><p>Upload a video to preview the surface<br>and select the area to monitor.</p></div></div>
+<div class="metrics"><div><span>IN ZONE</span><strong id="count">—</strong></div><div><span>PROCESSING FPS</span><strong id="fps">—</strong></div><div><span>VIDEO TIME</span><strong id="elapsed">—</strong></div><div><span>OPEN FINDINGS</span><strong id="openCount">0</strong></div></div>
+<div class="signal"><span class="dot"></span><span id="signal">Ready when you are</span></div><p class="hint monitor-note">A missing detection does not resolve an alert. Review the evidence and confirm removal.</p>
+</section></section>
+<section class="panel review"><div class="review-header"><div class="section-title"><span class="step">03</span><h2>Review findings</h2></div><div><select id="eventScope" aria-label="Event history scope"><option value="current">Current inspection</option><option value="all">All inspections</option></select> <a id="export" href="/api/events/export.csv" class="secondary">Export CSV ↓</a></div></div><p id="eventSummary" class="hint">Showing up to 200 recent findings.</p><div id="events"><div class="no-events">No findings yet. Alerts and evidence will appear here.</div></div></section>
+<footer>DebrisWatch · Local operator-assistance prototype <span id="footerMode"></span></footer>
+</main></body></html>

@@ -1,0 +1,14 @@
+services:
+  debriswatch:
+    image: debriswatch-backend:0.1.0
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      DW_DETECTOR: demo
+      DW_DATA_DIR: /app/runtime
+    volumes:
+      - debriswatch-data:/app/runtime
+    restart: unless-stopped
+volumes:
+  debriswatch-data:
