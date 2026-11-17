@@ -1,8 +1,14 @@
 # DebrisWatch
 
-A local debris-inspection backend with a browser dashboard. Upload a video, define an inspection area, and keep an evidence-backed record of persistent objects that need operator review. This implements the backend and initial frontend for the DebrisWatch course proposal.
+A local debris-inspection backend with a browser dashboard. Upload a video, define an inspection area, and keep an evidence-backed record of persistent objects that need operator review. This implements a local operator-assistance prototype for persistent debris inspection.
 
 **Current release: functional demo and model-integration scaffold.** Demo mode detects colored shapes in a generated video; it is not a trained debris model. The YOLO adapter, dataset converter, training and evaluation entry points are included. FOD-A training, camera testing, Jetson benchmarks and TensorRT optimization remain to be completed. No accuracy or hardware-performance result is claimed.
+
+## Architecture
+
+![DebrisWatch architecture](docs/media/architecture.svg)
+
+See the [release acceptance guide](docs/final_submission.md) for local smoke testing, event evaluation, screenshots, Jetson deployment and presentation preparation.
 
 ## Run the demo
 
