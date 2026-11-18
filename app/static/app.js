@@ -1,6 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 let upload=null,job=null,image=null,drawing=false,points=[],zone=defaultZone(),polling=false,previewMode=false;
+let lastFrameKey=null;
 const canvas=$('canvas'),ctx=canvas.getContext('2d');
 function defaultZone(){return [[.05,.05],[.95,.05],[.95,.95],[.05,.95]];}
 function notify(text=''){$('notice').textContent=text;}
@@ -20,5 +21,12 @@ $('stop').onclick=async()=>{try{job=await api(`/api/jobs/${job.id}/stop`,{method
 function element(tag,text,cls){const node=document.createElement(tag);if(text)node.textContent=text;if(cls)node.className=cls;return node;}
 async function renderEvents(){const query=job&&$('eventScope').value==='current'?`?job_id=${job.id}`:'';const events=await api('/api/events'+query);$('export').href='/api/events/export.csv'+query;const summary=await api('/api/events/summary'+query);$('openCount').textContent=summary.unresolved;$('eventSummary').textContent=`Showing ${events.length} of ${summary.total} findings. CSV includes all matching findings.`;const container=$('events');container.replaceChildren();if(!events.length){container.append(element('div','No findings yet. Alerts and evidence will appear here.','no-events'));return;}for(const ev of events){const row=element('div','',`event ${ev.rule} ${ev.status}`);if(ev.snapshot_url){const link=element('a');link.href=ev.snapshot_url;link.target='_blank';const img=element('img');img.src=ev.snapshot_url;img.alt='Inspection evidence snapshot';link.append(img);row.append(link);}const info=element('div','','event-info');info.append(element('strong',ev.rule==='priority'?'Priority cleanup':'Inspect and remove'),element('p',ev.message),element('small',`${new Date(ev.created_at).toLocaleString()} · video ${ev.media_seconds.toFixed(1)}s · ${ev.status}`));row.append(info);const actions=element('div','','event-actions');for(const [action,label]of [['acknowledge','Acknowledge'],['resolve','Confirm removed']]){if(ev.status==='resolved'||(action==='acknowledge'&&ev.status!=='open'))continue;const button=element('button',label,'secondary');button.onclick=async()=>{try{await api(`/api/events/${ev.id}/${action}`,{method:'POST'});await renderEvents();}catch(e){notify(e.message);}};actions.append(button);}row.append(actions);container.append(row);}}
 $('eventScope').onchange=()=>renderEvents().catch(e=>notify(e.message));
-async function tick(){if(polling)return;polling=true;try{if(job){job=await api(`/api/jobs/${job.id}`);$('jobStatus').textContent=job.status.toUpperCase();$('count').textContent=job.count;$('fps').textContent=job.fps;$('elapsed').textContent=`${job.media_seconds.toFixed(1)}s`;$('signal').textContent=job.signal;if(job.error)notify(job.error);if(job.frame_index>0&&!previewMode)await loadImage(`/api/jobs/${job.id}/frame?t=${Date.now()}`).catch(()=>{});controls();}await renderEvents();}catch(e){notify(e.message);}finally{polling=false;}}
+async function refreshFrame(){
+  if(!job.frame_available||previewMode)return;
+  const key=`${job.id}:${job.frame_index}`;
+  if(key===lastFrameKey)return;
+  lastFrameKey=key;
+  await loadImage(`/api/jobs/${job.id}/frame?index=${job.frame_index}`).catch(()=>{});
+}
+async function tick(){if(polling)return;polling=true;try{if(job){job=await api(`/api/jobs/${job.id}`);$('jobStatus').textContent=job.status.toUpperCase();$('count').textContent=job.count;$('fps').textContent=job.fps;$('elapsed').textContent=`${job.media_seconds.toFixed(1)}s`;$('signal').textContent=job.signal;if(job.error)notify(job.error);await refreshFrame();controls();}await renderEvents();}catch(e){notify(e.message);}finally{polling=false;}}
 (async()=>{try{const health=await api('/api/health');$('mode').textContent=health.demo?'DEMO MODE · Colored-object simulation. Use the generated demo video. Trained debris detection is not active.':'YOLO MODE · Local debris inspection. Check job status for model readiness.';$('mode').classList.toggle('live',!health.demo);$('footerMode').textContent=health.demo?'Demo outputs are not model accuracy results.':'Operator review required.';if(!health.camera_enabled)$('source').querySelector('[value=camera]').disabled=true;const jobs=await api('/api/jobs');if(jobs.length){job=jobs[0];zone=job.settings.zone;}await tick();controls();setInterval(tick,800);}catch(e){notify(e.message);}})();

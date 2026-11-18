@@ -1,8 +1,36 @@
 # DebrisWatch
 
-A local debris-inspection backend with a browser dashboard. Upload a video, define an inspection area, and keep an evidence-backed record of persistent objects that need operator review. This implements the backend and initial frontend for the DebrisWatch course proposal.
+A local debris-inspection backend with a browser dashboard. Upload a video, define an inspection area, and keep an evidence-backed record of persistent objects that need operator review. This implements a local operator-assisted inspection prototype.
 
-**Current release: functional demo and model-integration scaffold.** Demo mode detects colored shapes in a generated video; it is not a trained debris model. The YOLO adapter, dataset converter, training and evaluation entry points are included. FOD-A training, camera testing, Jetson benchmarks and TensorRT optimization remain to be completed. No accuracy or hardware-performance result is claimed.
+**Verified workflows:** The synthetic demo passed on macOS. A YOLO11n model trained on FOD-A ran on Jetson Orin CUDA and produced an inspection finding through the dashboard.
+
+## Validation results
+
+### FOD-A detector
+
+YOLO11n was fine-tuned for one epoch on an Apple M3 using MPS and a 320-pixel input. Four image IDs shared by the supplied splits were kept in validation and excluded from training.
+
+| Training images | Validation images | Precision | Recall | mAP@0.5 | mAP@0.5–0.95 |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 25,294 | 8,429 | 0.924 | 0.908 | 0.958 | 0.682 |
+
+The supplied `test.txt` split served as validation and was used for checkpoint selection. Independent test evaluation remains pending.
+
+### Jetson Orin
+
+The trained model detected debris in a FOD-A validation image at **0.77 confidence**. Ultralytics reported **29.3 ms of inference time** for that image at 320 × 320. A 10-second replay of the same image completed in the Jetson-hosted dashboard and produced an **Inspect and remove** finding. Sustained throughput, live-camera inspection, and TensorRT benchmarking remain pending.
+
+![Debris detection on the Jetson Orin](docs/media/jetson-fod-prediction.jpg)
+
+### Synthetic demo
+
+All 23 tests passed on macOS. The synthetic smoke test verified three inspection findings, one priority finding, four JPEG snapshots, acknowledgment, manual resolution, and CSV export.
+
+![Synthetic replay with three tracked objects inside the inspection zone](docs/media/demo-priority.jpg)
+
+[Watch the Jetson Orin dashboard demo](docs/media/jetson-dashboard-demo.mov)
+
+[Annotated synthetic replay](docs/media/demo-replay.mp4) · [Architecture](docs/media/architecture.svg) · [Submission runbook](docs/final_submission.md)
 
 ## Run the demo
 
@@ -33,7 +61,7 @@ The demo video is generated locally and is intentionally excluded from Git. No d
 - Normalized inspection polygon, confidence threshold, lightweight IoU tracking, persistence rules and uncertainty flag.
 - SQLite persistence for uploads, jobs and event state; evidence JPEGs on disk. Unfinished jobs become `interrupted` after a restart.
 - Responsive HTML/CSS/JavaScript dashboard served by the backend. No Node build or third-party frontend service is required.
-- FOD-A Pascal VOC conversion with explicit source-group splits, YOLO training/evaluation scripts, Docker packaging and GitHub Actions checks.
+- FOD-A Pascal VOC conversion using supplied split files or verified source groups, YOLO training/evaluation scripts, Docker packaging and GitHub Actions checks.
 
 ## Alert rules
 
@@ -121,36 +149,48 @@ Start-request example after uploading:
 
 `realtime: false` processes a recording without playback pacing while keeping the same media-time rules. `fps` is cumulative end-to-end throughput including pacing; `processing_ms` is the latest frame's detection/rule/annotation/evidence work, not a GPU-only inference benchmark. The dashboard displays the most recent 200 findings; its count and CSV cover all matching records.
 
-## Training real debris detection
+## Reproduce the FOD-A training run
 
-Use the official [FOD-A dataset repository](https://github.com/FOD-UNOmaha/FOD-data) and its Pascal VOC download links. Download/extract separately into `datasets/fod-voc`. Data and weights are not included in this repository. Preserve source attribution and review the dataset's usage terms before redistribution.
+Download the 300 × 300 Pascal VOC release from the [FOD-A dataset repository](https://github.com/FOD-UNOmaha/FOD-data). Extract it so `datasets/fod-voc/VOC2007` contains `Annotations`, `JPEGImages`, and `ImageSets`. The project does not bundle data or weights.
+
+From the repository root, convert the supplied splits to single-class YOLO format:
 
 ```bash
-python -m scripts.prepare_dataset --input datasets/fod-voc --inventory groups.csv
+python -m scripts.prepare_dataset \
+  --input datasets/fod-voc/VOC2007 \
+  --official-fod-split \
+  --output datasets/fod-yolo-official
 ```
 
-Fill `group_id` for every annotation using source-video/session metadata. Keep related frames together; do not invent an independent group for every frame. If the downloaded archive does not expose reliable sequence identities, obtain them from the source or document a conservative grouping before evaluating. The converter deliberately does not guess this information.
+The converter uses `trainval.txt` for training and `test.txt` for validation. It deduplicates IDs within each split and reserves shared IDs for validation. For a separate train/validation/test experiment with verified sequence groups, use the `--inventory` and `--groups-csv` options.
+
+Train in a dedicated Python 3.12 environment. The reported run used Apple MPS:
 
 ```bash
-python -m scripts.prepare_dataset --input datasets/fod-voc --groups-csv groups.csv --output datasets/fod-yolo
-```
-
-The converter merges object classes into `debris`, validates VOC boxes and complete group coverage, rejects exact-image leakage across splits, and creates approximately 70/15/15 train/validation/test partitions **by group count** (image ratios can differ). It writes a reproducible split manifest. At least three independent groups are required; more groups are preferable. Near-duplicate and scene leakage still need human review. Conversion has been tested on generated VOC fixtures; the complete FOD-A archive has not been processed in this workspace.
-
-Train in a separate workstation/GPU environment, not the minimal demo environment:
-
-```bash
-python3 -m venv .venv-ml
-source .venv-ml/bin/activate
+conda create -n debriswatch-ml python=3.12 pip -y
+conda activate debriswatch-ml
 python -m pip install -r requirements-ml.txt
-python -m scripts.train --data datasets/fod-yolo/data.yaml --device 0
-# After reviewing validation results, copy best.pt from the printed run path:
-cp runs/fod/weights/best.pt models/debris.pt
-python -m scripts.evaluate --weights models/debris.pt --device 0
-DW_DETECTOR=yolo DW_MODEL_PATH=models/debris.pt DW_DEVICE=0 python -m scripts.run_backend
+python -m scripts.train --data datasets/fod-yolo-official/data.yaml --device mps --epochs 1 --batch 8
 ```
 
-Use `--device cpu` if no compatible GPU is available; training will take longer. Subsequent training runs may use `runs/fod2`, etc. Initial training can download pretrained YOLO11n weights; the server never downloads a model. The server requires exactly one class named `debris` and rejects ordinary COCO weights. The optional ML dependency set and adapter have not been executed against a real trained model here. See [Jetson setup](docs/jetson.md) for platform-specific PyTorch requirements.
+Use `--device cpu` on a CPU-only workstation or `--device 0` on a CUDA workstation. Copy `weights/best.pt` from the printed run directory to `models/debris.pt`. The official-split workflow reports validation metrics in the training output. The independent evaluation script requires a YAML with a separate `test:` entry.
+
+## Deploy to Jetson
+
+Use the Jetson's CUDA-enabled Python environment. The verified run used the existing `jetson_labs_dev` container and `yolo_gpu` environment. Copy the project and your `debris.pt` checkpoint into the container. From the project root, set the checkpoint path and launch:
+
+```bash
+DW_DETECTOR=yolo DW_MODEL_PATH=/tmp/debris.pt DW_DEVICE=0 \
+  python -m scripts.run_backend --host 127.0.0.1 --port 8010
+```
+
+For a container using host networking, open an SSH tunnel from your workstation:
+
+```bash
+ssh -N -L 8001:127.0.0.1:8010 jetson@JETSON_IP
+```
+
+Open [the dashboard](http://127.0.0.1:8001) and check for **YOLO MODE** before uploading a recording. See [Jetson setup](docs/jetson.md) for Python and CUDA dependency details.
 
 ## Tests and submission
 
@@ -160,20 +200,6 @@ python -m pytest
 ```
 
 See [validation and submission status](docs/backend_submission.md) and [frontend acceptance steps](docs/frontend_checklist.md). GitHub Actions runs tests, generates the demo and builds the Docker image on push/PR. Model accuracy and staged-video event metrics are separate experiments, not inferred from unit tests.
-
-## Back up to GitHub
-
-Repository creation requires your authenticated GitHub account. The supplied helper creates a **private** repository by default and pushes the local branch, or pushes an existing `origin`.
-
-```bash
-gh auth login
-# Set your actual commit identity if it is not already configured:
-git config --global user.name "YOUR NAME"
-git config --global user.email "YOUR EMAIL"
-bash scripts/backup_github.sh debriswatch
-```
-
-Do not put tokens in source files. The `.gitignore` excludes datasets, runtime records, virtual environments, weights and training output. Invite the instructor to the private repository if required. The project image name is recorded above; a container-registry push is a separate step.
 
 ## Files
 

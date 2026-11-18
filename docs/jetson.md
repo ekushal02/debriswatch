@@ -20,6 +20,35 @@ This application targets Python 3.11/3.12 for its validated CPU setup. Older Jet
 
 Train on a separate workstation if possible. Transfer only the validated single-class `debris` weights. Install the backend and optional ML dependencies in the compatible environment without replacing a working NVIDIA-provided PyTorch/torchvision pair. Record the final environment with `python -m pip freeze` after installation and inference verification.
 
+## Reuse the existing Jetson lab setup
+
+On the Mac, copy a clean reviewed checkout to a directory inside your existing Jetson lab bind mount. Use the actual SSH host and confirm the container mount with `docker inspect jetson_labs_dev --format '{{json .Mounts}}'` on the Jetson. Transfer `models/debris.pt` separately after training.
+
+On the Jetson:
+
+```bash
+docker exec -it jetson_labs_dev bash
+conda activate yolo_gpu
+cd /home/jetson_labs/debriswatch
+python -m scripts.jetson_info
+python -c "import cv2, torch, torchvision, ultralytics; assert torch.cuda.is_available(); print(torch.cuda.get_device_name(0))"
+ls -l /dev/video*
+```
+
+The class environment uses Python 3.10, whereas the demo dependency set includes a multipart pin that requires Python 3.11. Install web packages separately inside the class environment so the existing vision stack stays in place. Review the dry-run plan, then repeat without `--dry-run` if the plan is limited to web dependencies.
+
+```bash
+python -m pip install --dry-run 'fastapi==0.162.4' 'uvicorn==0.54.0' 'pydantic==2.14.3' 'python-multipart==0.0.32'
+```
+
+If the web dependencies cannot resolve on Python 3.10, use a compatible Jetson container with Python 3.11 and verified CUDA-enabled PyTorch. Rerun the import check after installation. The lab container in the class transcript used host networking, so a localhost-bound server can be reached through the following Mac tunnel, using the actual SSH host:
+
+```bash
+ssh -N -L 8000:127.0.0.1:8000 jetson@JETSON_HOST
+```
+
+Stop any Mac-local service using port 8000 before opening the tunnel. If the installed container uses bridge networking instead, verify its port mapping and bind address before using the tunnel. The camera must be mapped into the container.
+
 ## Run after environment verification
 
 Confirm `torch.cuda.is_available()` and a small local-model inference before starting the service:

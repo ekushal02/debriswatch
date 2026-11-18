@@ -40,8 +40,13 @@ class Runner:
     def get(self, jid):
         with self.lock:
             if self.current and self.current['id'] == jid:
-                return copy.deepcopy(self.current)
-        return self.store.job(jid)
+                job = copy.deepcopy(self.current)
+                job['frame_available'] = self.jpeg is not None
+                return job
+        job = self.store.job(jid)
+        if job is not None:
+            job['frame_available'] = False
+        return job
 
     def stop(self, jid):
         with self.lock:
