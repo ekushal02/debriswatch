@@ -11,7 +11,7 @@ Prepared: 10 November 2026. This is the backend plus an initial frontend impleme
 | Container image name | Build target `debriswatch-backend:0.1.0`; base `python:3.11-slim-bookworm` |
 | README | Root `README.md` with setup, API, configuration, demo, model training and backup instructions |
 | Runnable backend scripts | `app/` package and `python -m scripts.run_backend` |
-| Frontend files | `app/static/index.html`, `style.css`, `app.js`; served at `/` |
+| Frontend files | `frontend/index.html`, `style.css`, `app.js`; served at `/` |
 | Tests | `tests/`; CI workflow in `.github/workflows/tests.yml` |
 
 ## What works in the tested demo
@@ -30,7 +30,7 @@ Executed on Linux with Python 3.12:
 - Live Uvicorn HTTP smoke test: health, dashboard HTML and OpenAPI returned HTTP 200.
 - `python -m pip check`: no broken requirements.
 - `python -m compileall -q app scripts tests`: passed.
-- `node --check app/static/app.js` and `bash -n scripts/backup_github.sh`: passed.
+- `node --check frontend/app.js` and `bash -n scripts/backup_github.sh`: passed.
 - One non-failing test warning: Starlette deprecates its legacy HTTPX test-client transport; the pinned tests pass with that transport.
 
 Docker is not available in this workspace, so the image build/run remains unverified. Chromium could not launch because the environment blocked a required socket operation, so no successful browser interaction or visual-layout result is claimed. The full FOD-A download, optional Ultralytics environment, actual YOLO weights, camera capture and Jetson GPU execution have not been tested.

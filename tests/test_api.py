@@ -1,8 +1,8 @@
 import time
 import pytest
 from fastapi.testclient import TestClient
-from app.config import Config
-from app.main import create_app
+from backend.config import Config
+from backend.main import create_app
 from scripts.generate_demo import generate
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 import pytest
-from app.engine import Detection, RuleEngine
-from app.schemas import InspectionSettings
+from backend.engine import Detection, RuleEngine
+from backend.schemas import InspectionSettings
 
 def box(x=10, confidence=.9): return Detection((x,10,x+10,20),confidence)
 def engine(**changes): return RuleEngine(InspectionSettings(zone=[(0,0),(1,0),(1,1),(0,1)], **changes))

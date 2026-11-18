@@ -201,12 +201,14 @@ python -m pytest
 
 See [validation and submission status](docs/backend_submission.md) and [frontend acceptance steps](docs/frontend_checklist.md). GitHub Actions runs tests, generates the demo and builds the Docker image on push/PR. Model accuracy and staged-video event metrics are separate experiments, not inferred from unit tests.
 
-## Files
+## Repository layout
 
-- `app/main.py`, `schemas.py`, `config.py`: HTTP interface and validation.
-- `app/worker.py`, `detectors.py`, `engine.py`: capture, detection, tracking and event rules.
-- `app/storage.py`: SQLite persistence.
-- `app/static/`: frontend HTML, CSS and JavaScript.
+`backend/` contains the Python API and inspection logic. `frontend/` contains the browser dashboard. FastAPI serves the dashboard and API on the same port. Run the project commands from the repository root.
+
+- `backend/main.py`, `schemas.py`, `config.py`: HTTP interface and validation.
+- `backend/worker.py`, `detectors.py`, `engine.py`: capture, detection, tracking and event rules.
+- `backend/storage.py`: SQLite persistence.
+- `frontend/`: frontend HTML, CSS and JavaScript.
 - `scripts/`: launcher, demo generation, data conversion, training, evaluation, device information and GitHub backup.
 - `tests/`: backend, rule, persistence and data-conversion checks.
 - `requirements.txt`, `requirements-dev.txt`, `requirements-ml.txt`: runtime, tests and optional ML packages.

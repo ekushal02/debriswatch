@@ -1,4 +1,4 @@
-from app.storage import Store,now
+from backend.storage import Store,now
 
 def test_restart_preserves_events_and_marks_unfinished_jobs(tmp_path):
     s=Store(tmp_path)

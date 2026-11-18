@@ -5,7 +5,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 li
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN useradd --create-home --uid 10001 inspector && mkdir -p /app/runtime && chown inspector:inspector /app/runtime
-COPY --chown=inspector:inspector app ./app
+COPY --chown=inspector:inspector backend ./backend
+COPY --chown=inspector:inspector frontend ./frontend
 COPY --chown=inspector:inspector scripts ./scripts
 USER inspector
 EXPOSE 8000

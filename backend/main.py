@@ -189,7 +189,7 @@ def create_app(config=None):
             raise HTTPException(404,'Snapshot not found.')
         return FileResponse(config.data_dir/'snapshots'/item['snapshot'])
 
-    static = Path(__file__).parent/'static'
+    static = Path(__file__).resolve().parent.parent / 'frontend'
     app.mount('/static',StaticFiles(directory=static),name='static')
     @app.get('/',include_in_schema=False)
     def home():
